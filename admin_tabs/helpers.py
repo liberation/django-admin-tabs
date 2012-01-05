@@ -196,6 +196,7 @@ class TabbedPageConfig(object):
 class TabbedModelAdmin(ModelAdmin):
     
     declared_fieldsets = []
+    page_config_class = TabbedPageConfig
     def __init__(self, *args, **kwargs):
         self._page_config = None
         return super(TabbedModelAdmin, self).__init__(*args, **kwargs)
