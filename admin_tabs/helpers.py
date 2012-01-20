@@ -160,14 +160,18 @@ class TabbedPageConfig(object):
         # Populate the fieldsets
         for f in dir(self.FieldsetsConfig):
             if f.startswith("_"): continue
-            fieldsetconfig = AdminFieldsetConfig(**getattr(self.FieldsetsConfig, f))
+            fields = getattr(self.FieldsetsConfig, f)
+            if not fields: continue
+            fieldsetconfig = AdminFieldsetConfig(**fields)
             setattr(self.Fields, f, fieldsetconfig)
         # Put AdminCols instance in self.Cols
         for f in dir(self.ColsConfig):
             if f.startswith("_"): continue
             # Make a copy, as it is a dict static properties
             # and we are making change on it
-            ColsConfig = dict(getattr(self.ColsConfig, f))
+            cols = getattr(self.ColsConfig, f)
+            if not cols: continue
+            ColsConfig = dict(cols)
             # We want AdminFieldsetConfig instances, not names 
             ColsConfig['fieldsets'] = map(lambda k: getattr(self.Fields, k), ColsConfig['fieldsets']) 
             # Col instance need to know about its AdminFormConfig parent
@@ -179,7 +183,9 @@ class TabbedPageConfig(object):
             if f.startswith("_"): continue
             # Make a copy, as it is a dict static properties
             # and we are making change on it
-            tabconfig = dict(getattr(self.TabsConfig, f))
+            tabs = getattr(self.TabsConfig, f)
+            if not tabs: continue
+            tabconfig = dict(tabs)
             # We want ColsConfig instances, not names
             tabconfig['cols'] = map(lambda k: getattr(self.Cols, k), tabconfig['cols'])
             setattr(self.Tabs, f, AdminTab(**tabconfig))
