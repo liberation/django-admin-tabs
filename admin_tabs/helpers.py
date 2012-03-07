@@ -10,19 +10,32 @@ class AdminCol(object):
     """
     def __init__(self, fieldsets, name=None, css_id=None, css_class=None):
         self.name = name
-        self.fieldsets = [] # names of fieldsets for now (real Fieldsets should be better)
-        for fieldset in fieldsets:
-            self.add_fieldset(fieldset)
+        self._fieldsets = {} # names of fieldsets for now (real Fieldsets should be better)
+        for idx, fieldset in enumerate(fieldsets):
+            self.add_fieldset(fieldset, idx)
         self.css_id = css_id
         self.css_class = css_class
     
     def add_fieldset(self, fieldset, position=None):
-        # FIXME: manage position
-        self.fieldsets.append(fieldset)
-    
+        if not position:
+                position = len(self)
+        self._fieldsets[position] = fieldset
+
+    @property
+    def fieldsets(self):
+        """
+        Returns the sorted fieldsets (the sort is made on the key, which is the position)
+        """
+        keys = self._fieldsets.keys()
+        keys.sort()
+        return map(self._fieldsets.get, keys)
+
     def __contains__(self, item):
         return item in self.fieldsets
-    
+
+    def __len__(self):
+        return len(self._fieldsets)
+
     def get_fieldsets(self, request, obj=None):
         """
         Returns fieldsets, as expected by Django...
@@ -46,6 +59,7 @@ class AdminCol(object):
                 )
             col_elements.append(col_element)
         return col_elements
+
 
 class AdminTab(object):
     """
@@ -75,7 +89,7 @@ class AdminTab(object):
     
     def __iter__(self):
         return self.cols.__iter__()
-    
+
     def __len__(self):
         return len(self._cols)
     
@@ -109,6 +123,20 @@ class AdminFieldsetConfig(object):
     def __getitem__(self, item):
         return getattr(self, item)
 
+
+class Config(dict):
+    """
+    Basic extension of a dict object to manage the attributes order in class
+    definition.
+    """
+    creation_counter = 0
+
+    def __init__(self, *args, **kwargs):
+        self.creation_counter = Config.creation_counter
+        Config.creation_counter += 1
+        return super(Config, self).__init__(*args, **kwargs)
+
+
 class MetaAdminPageConfig(type):
     """
     This metaclass make inheritance between the inner classes of the PageConfig
@@ -117,6 +145,7 @@ class MetaAdminPageConfig(type):
     def __new__(mcs, name, base, dict):
         it = type.__new__(mcs, name, base, dict)
         # Make the FieldsetsConfig attributes overwrittable and inheritable
+        # TODO: reverse mro like its done in tabs
         for cls in it.mro():
             if not hasattr(cls, "FieldsetsConfig"): continue
             for attr in dir(cls.FieldsetsConfig):
@@ -124,19 +153,40 @@ class MetaAdminPageConfig(type):
                 if hasattr(it.FieldsetsConfig, attr): continue # do not override
                 setattr(it.FieldsetsConfig, attr, getattr(cls.FieldsetsConfig, attr))
         # Make the ColsConfig attributes overwrittable and inheritable
+        # TODO: reverse mro like its done in tabs
         for cls in it.mro():
             if not hasattr(cls, "ColsConfig"): continue
             for attr in dir(cls.ColsConfig):
                 if attr.startswith("_"): continue
                 if hasattr(it.ColsConfig, attr): continue # do not override
                 setattr(it.ColsConfig, attr, getattr(cls.ColsConfig, attr))
-        # Make the TabsConfig attributes overwrittable and inheritable
-        for cls in it.mro():
+        # --- Make the TabsConfig attributes overwrittable and inheritable
+        reverse_mro = list(it.mro())
+        reverse_mro.reverse()
+        _final_attrs = {}  # Attrs that will be finally added to the created class
+        for cls in reverse_mro:
             if not hasattr(cls, "TabsConfig"): continue
-            for attr in dir(cls.TabsConfig):
-                if attr.startswith("_"): continue
-                if hasattr(it.TabsConfig, attr): continue # do not override
-                setattr(it.TabsConfig, attr, getattr(cls.TabsConfig, attr))
+            for attr_name in dir(cls.TabsConfig):
+                attr = getattr(cls.TabsConfig, attr_name)
+                # We keep Config instances AND attr_name already in _final_attrs
+                # because they can be overwritten by None
+                if not isinstance(attr, Config) and not attr_name in _final_attrs: continue
+                # Setting some attr to None remove an attr that was setted in a 
+                # parent class
+                if attr is None and attr_name in _final_attrs:
+                    del _final_attrs[attr_name]
+                    delattr(cls.TabsConfig, attr_name)
+                else:
+                    _final_attrs[attr_name] = attr  # TODO merge ?
+        # Add selected tabs in the created class
+        for attr_name, attr in _final_attrs.iteritems():
+            setattr(it.TabsConfig, attr_name, attr)
+
+        # Define a default tabs order if user as not provided one
+        if not hasattr(it.TabsConfig, 'tabs_order'):
+            tabs_order = [attr for attr in dir(it.TabsConfig) if not attr.startswith('_')]
+            tabs_order.sort(key=lambda attr: getattr(it.TabsConfig, attr).creation_counter)
+            setattr(it.TabsConfig, "tabs_order", tabs_order)
         return it
 
 class TabbedPageConfig(object):
@@ -178,9 +228,9 @@ class TabbedPageConfig(object):
 #            ColsConfig["page_config"] = self
             setattr(self.Cols, f, AdminCol(**ColsConfig))
             del ColsConfig
-        # Put AdminTabs instance in self.Tabs
-        for f in dir(self.TabsConfig):
-            if f.startswith("_"): continue
+        # Put AdminTabs instances in self.Tabs
+        setattr(self.Tabs, 'tabs_order', [])  # TODO: manage it via a metaclass
+        for f in self.TabsConfig.tabs_order:
             # Make a copy, as it is a dict static properties
             # and we are making change on it
             tabs = getattr(self.TabsConfig, f)
@@ -189,10 +239,10 @@ class TabbedPageConfig(object):
             # We want ColsConfig instances, not names
             tabconfig['cols'] = map(lambda k: getattr(self.Cols, k), tabconfig['cols'])
             setattr(self.Tabs, f, AdminTab(**tabconfig))
-    
+            self.Tabs.tabs_order.append(f)
+
     def __iter__(self):
-        for attr in dir(self.Tabs):
-            if attr.startswith("_"): continue
+        for attr in self.Tabs.tabs_order:
             yield getattr(self.Tabs, attr)
     
     @property
