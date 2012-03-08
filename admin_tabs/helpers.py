@@ -137,6 +137,31 @@ class Config(dict):
         return super(Config, self).__init__(*args, **kwargs)
 
 
+class Tabs(object):
+    """
+    Base class for the tabs object.
+    
+    Manages the tabs order in __setattr__ and __delattr__.
+    """
+
+    def __init__(self, *args, **kwargs):
+        # Set the property to store the tabs order automatically from 
+        # __setattr__ and __delattr__
+        object.__setattr__(self, "tabs_order", [])
+
+    def __setattr__(self, name, value):
+        # Manage the tabs_order
+        if not name.startswith("_"):
+            self.tabs_order.append(name)
+        super(BaseTabs, self).__setattr__(name, value)
+
+    def __delattr__(self, name):
+        # Manage the tabs_order
+        if not name.startswith("_"):
+            self.tabs_order.remove(name)
+        super(BaseTabs, self).__delattr__(name)
+
+
 class MetaAdminPageConfig(type):
     """
     This metaclass make inheritance between the inner classes of the PageConfig
@@ -204,7 +229,9 @@ class TabbedPageConfig(object):
         # to prevent from sharing them between instances
         self.Fields = type("Fields", (object,), {})
         self.Cols = type("Cols", (object,), {})
-        self.Tabs = type("Tabs", (object,), {})
+        self.Tabs = Tabs()  # Instantiate it to be able to define __setattr__
+                            # and __delattr__
+                            # TODO: instanciate also Fields and Cols?
         self.model_admin = model_admin
         self.request=request
         # Populate the fieldsets
@@ -229,7 +256,6 @@ class TabbedPageConfig(object):
             setattr(self.Cols, f, AdminCol(**ColsConfig))
             del ColsConfig
         # Put AdminTabs instances in self.Tabs
-        setattr(self.Tabs, 'tabs_order', [])  # TODO: manage it via a metaclass
         for f in self.TabsConfig.tabs_order:
             # Make a copy, as it is a dict static properties
             # and we are making change on it
@@ -239,7 +265,6 @@ class TabbedPageConfig(object):
             # We want ColsConfig instances, not names
             tabconfig['cols'] = map(lambda k: getattr(self.Cols, k), tabconfig['cols'])
             setattr(self.Tabs, f, AdminTab(**tabconfig))
-            self.Tabs.tabs_order.append(f)
 
     def __iter__(self):
         for attr in self.Tabs.tabs_order:
@@ -254,10 +279,18 @@ class TabbedModelAdmin(ModelAdmin):
     declared_fieldsets = []
     page_config_class = TabbedPageConfig
     def __init__(self, *args, **kwargs):
-        self._page_config = None
+        self._page_config = None  # For caching, warning, it'a class consistent
+                                  # Override get_page_config for changing Tabs 
+                                  # at run time
         return super(TabbedModelAdmin, self).__init__(*args, **kwargs)
-    
+
     def get_page_config(self, request, obj=None, **kwargs):
+        """
+        Returns the page config for the current model_admin.
+        
+        Override this method to be able to change Tabs, Cols and Fields at 
+        runtime.
+        """
         if self._page_config is None:
             self._page_config = self.page_config_class(request, self, obj=obj)
         return self._page_config
@@ -268,6 +301,7 @@ class TabbedModelAdmin(ModelAdmin):
         for tab in page_config:
             for col in tab:
                 fieldsets += col.get_fieldsets(request, obj)
+        print "fieldsets", fieldsets
         return fieldsets
     
     def get_form(self, request, obj=None, **kwargs):
