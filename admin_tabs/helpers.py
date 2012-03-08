@@ -153,13 +153,13 @@ class Tabs(object):
         # Manage the tabs_order
         if not name.startswith("_"):
             self.tabs_order.append(name)
-        super(BaseTabs, self).__setattr__(name, value)
+        super(Tabs, self).__setattr__(name, value)
 
     def __delattr__(self, name):
         # Manage the tabs_order
         if not name.startswith("_"):
             self.tabs_order.remove(name)
-        super(BaseTabs, self).__delattr__(name)
+        super(Tabs, self).__delattr__(name)
 
 
 class MetaAdminPageConfig(type):
