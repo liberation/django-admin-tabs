@@ -54,6 +54,33 @@ class TabsConfigsInheritanceTests(TestCase):
         self.assertEqual(ABC.TabsConfig.c_tab["name"], "c_tab")
         self.failIf(hasattr(ABC.TabsConfig, "d_tab"))
 
+    def test_none_should_remove_inherited_tab(self):
+        """
+        When a class inherit from another, it could remove some tab attribute
+        in setting it with None value.
+        """
+
+        class A(TabbedPageConfig):
+            
+            class TabsConfig:
+                a_tab = Config(name='a_tab')
+                none_tab = Config(name='none_tab')
+
+        class AB(A):
+            
+            class TabsConfig:
+                b_tab = Config(name="b_tab")
+                none_tab = None
+
+        # A must have all its attribute
+        self.failUnless(hasattr(A.TabsConfig, "a_tab"))
+        self.failUnless(hasattr(A.TabsConfig, "none_tab"))
+
+        # AB must have its attribute and A's one, but not the None overidden
+        self.failUnless(hasattr(AB.TabsConfig, "b_tab"))
+        self.failUnless(hasattr(AB.TabsConfig, "a_tab"))
+        self.failIf(hasattr(AB.TabsConfig, "none_tab"))
+
 
 class TabsConfigOrderTests(TestCase):
     
