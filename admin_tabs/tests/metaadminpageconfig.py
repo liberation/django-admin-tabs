@@ -81,6 +81,24 @@ class TabsConfigsInheritanceTests(TestCase):
         self.failUnless(hasattr(AB.TabsConfig, "a_tab"))
         self.failIf(hasattr(AB.TabsConfig, "none_tab"))
 
+    def test_should_merge_non_overriden_attributes(self):
+        """
+        When inheriting from a parent, you can set only the attributes of a tab
+        that you want to ovverride.
+        """
+        class A(TabbedPageConfig):
+
+            class TabsConfig:
+                tab = Config(name="myname", cols=["a", "b", "c"])
+
+        class AB(A):
+
+            class TabsConfig:
+                tab = Config(cols=["b", "c", "a"])
+
+        self.assertEqual(AB.TabsConfig.tab["cols"], ["b", "c", "a"])
+        self.assertEqual(AB.TabsConfig.tab["name"], "myname")
+
 
 class TabsConfigOrderTests(TestCase):
     

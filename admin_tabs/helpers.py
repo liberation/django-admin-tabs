@@ -202,7 +202,11 @@ class MetaAdminPageConfig(type):
                     del _final_attrs[attr_name]
                     delattr(cls.TabsConfig, attr_name)
                 else:
-                    _final_attrs[attr_name] = attr  # TODO merge ?
+                    # Merge with parent's attr if it exists
+                    if attr_name in _final_attrs:
+                        _final_attrs[attr_name].update(attr)
+                    else:
+                        _final_attrs[attr_name] = attr
         # Add selected tabs in the created class
         for attr_name, attr in _final_attrs.iteritems():
             setattr(it.TabsConfig, attr_name, attr)
