@@ -2,7 +2,11 @@ from django.test import TestCase
 
 from admin_tabs.helpers import TabbedPageConfig, Config
 
-__all__ = ["TabsConfigsInheritanceTests", "TabsConfigOrderTests"]
+__all__ = [
+    "TabsConfigsInheritanceTests",
+    "TabsConfigOrderTests",
+    "ColsConfigIneritanceTests"
+]
 
 class TabsConfigsInheritanceTests(TestCase):
 
@@ -13,22 +17,22 @@ class TabsConfigsInheritanceTests(TestCase):
         """
 
         class A(TabbedPageConfig):
-            
+
             class TabsConfig:
                 a_tab = Config(name='a_tab')
-        
+
         class AB(A):
-            
+
             class TabsConfig:
                 b_tab = Config(name="b_tab")
 
         class AD(A):
-            
+
             class TabsConfig:
                 d_tab = Config(name="d_tab")
 
         class ABC(AB):
-            
+
             class TabsConfig:
                 c_tab = Config(name="c_tab")
 
@@ -129,4 +133,56 @@ class TabsConfigOrderTests(TestCase):
                 tab1 = Config(name='first')
                 tab3 = Config(name='third')
                 
-        self.assertEqual(A.TabsConfig.tabs_order, ["tab1", "tab2", "tab3"])        
+        self.assertEqual(A.TabsConfig.tabs_order, ["tab1", "tab2", "tab3"])
+
+
+class ColsConfigIneritanceTests(TestCase):
+
+    def test_should_inherit_from_parent(self):
+        """
+        When a PageConfig inherit from another, it must inherit the cols of its
+        parent.
+        """
+
+        class A(TabbedPageConfig):
+
+            class ColsConfig:
+                a_col = Config(name='a_col')
+
+        class AB(A):
+
+            class ColsConfig:
+                b_col = Config(name="b_col")
+
+        class AD(A):
+
+            class ColsConfig:
+                d_col = Config(name="d_col")
+
+        class ABC(AB):
+
+            class ColsConfig:
+                c_col = Config(name="c_col")
+
+        # A must have only its attribute
+        self.failUnless(hasattr(A.ColsConfig, "a_col"))
+        self.assertEqual(A.ColsConfig.a_col["name"], "a_col")
+        self.failIf(hasattr(A.ColsConfig, "b_col"))
+
+        # AB must have its attribute and A's one
+        self.failUnless(hasattr(AB.ColsConfig, "b_col"))
+        self.failUnless(hasattr(AB.ColsConfig, "a_col"))
+        self.assertEqual(AB.ColsConfig.a_col["name"], "a_col")
+        self.assertEqual(AB.ColsConfig.b_col["name"], "b_col")
+        self.failIf(hasattr(AB.ColsConfig, "c_col"))
+        self.failIf(hasattr(AB.ColsConfig, "d_col"))
+
+        # ABC must have its attribute, AB's one and A's one
+        self.failUnless(hasattr(ABC.ColsConfig, "c_col"))
+        self.failUnless(hasattr(ABC.ColsConfig, "b_col"))
+        self.failUnless(hasattr(ABC.ColsConfig, "a_col"))
+        self.assertEqual(ABC.ColsConfig.a_col["name"], "a_col")
+        self.assertEqual(ABC.ColsConfig.b_col["name"], "b_col")
+        self.assertEqual(ABC.ColsConfig.c_col["name"], "c_col")
+        self.failIf(hasattr(ABC.ColsConfig, "d_col"))
+
