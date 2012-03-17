@@ -5,7 +5,8 @@ from admin_tabs.helpers import TabbedPageConfig, Config
 __all__ = [
     "TabsConfigsInheritanceTests",
     "TabsConfigOrderTests",
-    "ColsConfigIneritanceTests"
+    "ColsConfigIneritanceTests",
+    "FieldsetsConfigIneritanceTests"
 ]
 
 class TabsConfigsInheritanceTests(TestCase):
@@ -187,3 +188,53 @@ class ColsConfigIneritanceTests(TestCase):
         self.assertEqual(ABC.ColsConfig.c_col["name"], "c_col")
         self.failIf(hasattr(ABC.ColsConfig, "d_col"))
 
+
+class FieldsetsConfigIneritanceTests(TestCase):
+
+    def test_should_inherit_from_parent(self):
+        """
+        When a PageConfig inherit from another, it must inherit the fieldsets of its
+        parent.
+        """
+
+        class A(TabbedPageConfig):
+
+            class FieldsetsConfig:
+                a_fieldset = Config(name='a_fieldset')
+
+        class AB(A):
+
+            class FieldsetsConfig:
+                b_fieldset = Config(name="b_fieldset")
+
+        class AD(A):
+
+            class FieldsetsConfig:
+                d_fieldset = Config(name="d_fieldset")
+
+        class ABC(AB):
+
+            class FieldsetsConfig:
+                c_fieldset = Config(name="c_fieldset")
+
+        # A must have only its attribute
+        self.failUnless(hasattr(A.FieldsetsConfig, "a_fieldset"))
+        self.assertEqual(A.FieldsetsConfig.a_fieldset["name"], "a_fieldset")
+        self.failIf(hasattr(A.FieldsetsConfig, "b_fieldset"))
+
+        # AB must have its attribute and A's one
+        self.failUnless(hasattr(AB.FieldsetsConfig, "b_fieldset"))
+        self.failUnless(hasattr(AB.FieldsetsConfig, "a_fieldset"))
+        self.assertEqual(AB.FieldsetsConfig.a_fieldset["name"], "a_fieldset")
+        self.assertEqual(AB.FieldsetsConfig.b_fieldset["name"], "b_fieldset")
+        self.failIf(hasattr(AB.FieldsetsConfig, "c_fieldset"))
+        self.failIf(hasattr(AB.FieldsetsConfig, "d_fieldset"))
+
+        # ABC must have its attribute, AB's one and A's one
+        self.failUnless(hasattr(ABC.FieldsetsConfig, "c_fieldset"))
+        self.failUnless(hasattr(ABC.FieldsetsConfig, "b_fieldset"))
+        self.failUnless(hasattr(ABC.FieldsetsConfig, "a_fieldset"))
+        self.assertEqual(ABC.FieldsetsConfig.a_fieldset["name"], "a_fieldset")
+        self.assertEqual(ABC.FieldsetsConfig.b_fieldset["name"], "b_fieldset")
+        self.assertEqual(ABC.FieldsetsConfig.c_fieldset["name"], "c_fieldset")
+        self.failIf(hasattr(ABC.FieldsetsConfig, "d_fieldset"))

@@ -169,50 +169,67 @@ class MetaAdminPageConfig(type):
     """
     def __new__(mcs, name, base, dct):
         it = type.__new__(mcs, name, base, dct)
-        # Make the FieldsetsConfig attributes overwrittable and inheritable
-        # TODO: reverse mro like its done in tabs
-        for cls in it.mro():
-            if not hasattr(cls, "FieldsetsConfig"): continue
-            for attr in dir(cls.FieldsetsConfig):
-                if attr.startswith("_"): continue
-                if hasattr(it.FieldsetsConfig, attr): continue # do not override
-                setattr(it.FieldsetsConfig, attr, getattr(cls.FieldsetsConfig, attr))
-        # Make the ColsConfig attributes overwrittable and inheritable
-        # TODO: reverse mro like its done in tabs
-        for cls in it.mro():
-            if not hasattr(cls, "ColsConfig"): continue
-            for attr in dir(cls.ColsConfig):
-                if attr.startswith("_"): continue
-                if hasattr(it.ColsConfig, attr): continue # do not override
-                setattr(it.ColsConfig, attr, getattr(cls.ColsConfig, attr))
-        # --- Make the TabsConfig attributes overwrittable and inheritable
-        reverse_mro = list(it.mro())
-        reverse_mro.reverse()
-        _final_attrs = {}  # Attrs that will be finally added to the created class
-        for cls in reverse_mro:
-            if not hasattr(cls, "TabsConfig"): continue
-            for attr_name in dir(cls.TabsConfig):
-                attr = getattr(cls.TabsConfig, attr_name)
-                # We keep Config instances AND attr_name already in _final_attrs
-                # because they can be overwritten by None
-                if not isinstance(attr, Config) and not attr_name in _final_attrs: continue
-                # Setting some attr to None remove an attr that was setted in a 
-                # parent class
-                if attr is None and attr_name in _final_attrs:
-                    del _final_attrs[attr_name]
-                    delattr(cls.TabsConfig, attr_name)
-                else:
-                    # Merge with parent's attr if it exists
-                    if attr_name in _final_attrs:
-                        config = Config(**_final_attrs[attr_name])  # Copy it
-                        config.update(attr)
-                        attr = config
-                    _final_attrs[attr_name] = attr
-        # Add selected tabs in the created class
-        for attr_name, attr in _final_attrs.iteritems():
-            setattr(it.TabsConfig, attr_name, attr)
 
-        # Define a default tabs order if user as not provided one
+        def _manage_config_class_inheritance(config_class_name):
+            """
+            Manage the ihneritance of the config classes (TabsConfig, ColsConfig
+            and FieldsetsConfig):
+
+            - inherit attributes from parent when not setted in current class
+            - remove parent attribute when setted to None in current class
+            - merge with parent ones if setted also in current class
+
+            :param config_class_name: could be "TabsConfig", "ColsConfig" or
+                                      "FieldsetsConfig"
+            """
+            _final_attrs = {}  # Attrs that will be finally added to the created class
+            reverse_mro = list(it.mro())
+            reverse_mro.reverse()
+            for cls in reverse_mro:
+                if not hasattr(cls, config_class_name): continue
+                # config_class will be cls.TabsConfig, cls.ColsConfig or
+                # cls.FieldsetsConfig, according to the given config_class_name
+                # param
+                config_class = getattr(cls, config_class_name)
+                for attr_name in dir(config_class):
+                    # Lets look for the Config attribute of the current inner class
+                    attr = getattr(config_class, attr_name)
+                    # We keep Config instances AND attr_name already in _final_attrs
+                    # because they can be overwritten by None
+                    if not isinstance(attr, Config) and not attr_name in _final_attrs: continue
+                    # Setting some attr to None remove an attr that was setted in a 
+                    # parent class
+                    if attr is None and attr_name in _final_attrs:
+                        del _final_attrs[attr_name]
+                        delattr(config_class, attr_name)
+                    else:
+                        # Merge with parent's attr if exists
+                        if attr_name in _final_attrs:
+                            config = Config(**_final_attrs[attr_name])  # Copy it
+                            config.update(attr)
+                            attr = config
+                        _final_attrs[attr_name] = attr
+
+            # Add selected Config attributes in the created class
+            # final_class_config is the it.TabsConfig, it.ColsConfig or 
+            # it.FieldsetsConfig, according to the given config_class_name param
+            # (Do not confuse with the cls.X ones: `it` is current created class,
+            # `cls` are the parent classes from which we inherit attributes)
+            final_class_config = getattr(it, config_class_name)
+            for attr_name, attr in _final_attrs.iteritems():
+                setattr(final_class_config, attr_name, attr)
+            return _final_attrs
+
+        # --- Make the TabsConfig attributes overwrittable and inheritable
+        _manage_config_class_inheritance("TabsConfig")
+
+        # --- Make the ColsConfig attributes overwrittable and inheritable
+        _manage_config_class_inheritance("ColsConfig")
+
+        # --- Make the FieldsetsConfig attributes overwrittable and inheritable
+        _manage_config_class_inheritance("FieldsetsConfig")
+
+        # --- Define a default tabs order if user as not provided one
         if not hasattr(it.TabsConfig, 'tabs_order'):
             tabs_order = [attr for attr in dir(it.TabsConfig) if not attr.startswith('_')]
             tabs_order.sort(key=lambda attr: getattr(it.TabsConfig, attr).creation_counter)
