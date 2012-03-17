@@ -284,3 +284,49 @@ class FieldsetsConfigIneritanceTests(TestCase):
         self.assertEqual(ABC.FieldsetsConfig.b_fieldset["name"], "b_fieldset")
         self.assertEqual(ABC.FieldsetsConfig.c_fieldset["name"], "c_fieldset")
         self.failIf(hasattr(ABC.FieldsetsConfig, "d_fieldset"))
+
+    def test_none_should_remove_inherited_tab(self):
+        """
+        When a class inherit from another, it could remove some fieldset
+        attribute in setting it with None value.
+        """
+
+        class A(TabbedPageConfig):
+            
+            class FieldsetsConfig:
+                a_fieldset = Config(name='a_fieldset')
+                none_fieldset = Config(name='none_fieldset')
+
+        class AB(A):
+            
+            class FieldsetsConfig:
+                b_fieldset = Config(name="b_fieldset")
+                none_fieldset = None
+
+        # A must have all its attribute
+        self.failUnless(hasattr(A.FieldsetsConfig, "a_fieldset"))
+        self.failUnless(hasattr(A.FieldsetsConfig, "none_fieldset"))
+
+        # AB must have its attribute and A's one, but not the None overidden
+        self.failUnless(hasattr(AB.FieldsetsConfig, "b_fieldset"))
+        self.failUnless(hasattr(AB.FieldsetsConfig, "a_fieldset"))
+        self.failIf(hasattr(AB.FieldsetsConfig, "none_fieldset"))
+
+    def test_should_merge_non_overriden_attributes(self):
+        """
+        When inheriting from a parent, you can set only the attributes of a 
+        fieldset that you want to ovverride.
+        """
+        class A(TabbedPageConfig):
+
+            class FieldsetsConfig:
+                fieldset = Config(name="myname", fields=["a", "b", "c"])
+
+        class AB(A):
+
+            class FieldsetsConfig:
+                fieldset = Config(fields=["b", "c", "a"])
+
+        self.assertEqual(A.FieldsetsConfig.fieldset["fields"], ["a", "b", "c"])
+        self.assertEqual(AB.FieldsetsConfig.fieldset["fields"], ["b", "c", "a"])
+        self.assertEqual(AB.FieldsetsConfig.fieldset["name"], "myname")
