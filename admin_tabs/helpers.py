@@ -167,8 +167,8 @@ class MetaAdminPageConfig(type):
     This metaclass make inheritance between the inner classes of the PageConfig
     classes.
     """
-    def __new__(mcs, name, base, dict):
-        it = type.__new__(mcs, name, base, dict)
+    def __new__(mcs, name, base, dct):
+        it = type.__new__(mcs, name, base, dct)
         # Make the FieldsetsConfig attributes overwrittable and inheritable
         # TODO: reverse mro like its done in tabs
         for cls in it.mro():
@@ -204,9 +204,10 @@ class MetaAdminPageConfig(type):
                 else:
                     # Merge with parent's attr if it exists
                     if attr_name in _final_attrs:
-                        _final_attrs[attr_name].update(attr)
-                    else:
-                        _final_attrs[attr_name] = attr
+                        config = Config(**_final_attrs[attr_name])  # Copy it
+                        config.update(attr)
+                        attr = config
+                    _final_attrs[attr_name] = attr
         # Add selected tabs in the created class
         for attr_name, attr in _final_attrs.iteritems():
             setattr(it.TabsConfig, attr_name, attr)

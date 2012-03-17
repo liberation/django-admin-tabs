@@ -100,6 +100,7 @@ class TabsConfigsInheritanceTests(TestCase):
             class TabsConfig:
                 tab = Config(cols=["b", "c", "a"])
 
+        self.assertEqual(A.TabsConfig.tab["cols"], ["a", "b", "c"])
         self.assertEqual(AB.TabsConfig.tab["cols"], ["b", "c", "a"])
         self.assertEqual(AB.TabsConfig.tab["name"], "myname")
 
