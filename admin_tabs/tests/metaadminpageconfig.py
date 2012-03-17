@@ -188,6 +188,52 @@ class ColsConfigIneritanceTests(TestCase):
         self.assertEqual(ABC.ColsConfig.c_col["name"], "c_col")
         self.failIf(hasattr(ABC.ColsConfig, "d_col"))
 
+    def test_none_should_remove_inherited_tab(self):
+        """
+        When a class inherit from another, it could remove some col attribute
+        in setting it with None value.
+        """
+
+        class A(TabbedPageConfig):
+            
+            class ColsConfig:
+                a_col = Config(name='a_col')
+                none_col = Config(name='none_col')
+
+        class AB(A):
+            
+            class ColsConfig:
+                b_col = Config(name="b_col")
+                none_col = None
+
+        # A must have all its attribute
+        self.failUnless(hasattr(A.ColsConfig, "a_col"))
+        self.failUnless(hasattr(A.ColsConfig, "none_col"))
+
+        # AB must have its attribute and A's one, but not the None overidden
+        self.failUnless(hasattr(AB.ColsConfig, "b_col"))
+        self.failUnless(hasattr(AB.ColsConfig, "a_col"))
+        self.failIf(hasattr(AB.ColsConfig, "none_col"))
+
+    def test_should_merge_non_overriden_attributes(self):
+        """
+        When inheriting from a parent, you can set only the attributes of a col
+        that you want to ovverride.
+        """
+        class A(TabbedPageConfig):
+
+            class ColsConfig:
+                col = Config(name="myname", fieldsets=["a", "b", "c"])
+
+        class AB(A):
+
+            class ColsConfig:
+                col = Config(fieldsets=["b", "c", "a"])
+
+        self.assertEqual(A.ColsConfig.col["fieldsets"], ["a", "b", "c"])
+        self.assertEqual(AB.ColsConfig.col["fieldsets"], ["b", "c", "a"])
+        self.assertEqual(AB.ColsConfig.col["name"], "myname")
+
 
 class FieldsetsConfigIneritanceTests(TestCase):
 
