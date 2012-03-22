@@ -55,7 +55,10 @@ class AdminCol(object):
             else: # Classic fieldset
                 col_element = (
                     fieldset_config.name,
-                    {"fields": fieldset_config.fields}
+                    {
+                        "fields": fieldset_config.fields,
+                        "classes": fieldset_config.css_classes,
+                    }
                 )
             col_elements.append(col_element)
         return col_elements
@@ -323,7 +326,6 @@ class TabbedModelAdmin(ModelAdmin):
         for tab in page_config:
             for col in tab:
                 fieldsets += col.get_fieldsets(request, obj)
-        print "fieldsets", fieldsets
         return fieldsets
     
     def get_form(self, request, obj=None, **kwargs):
