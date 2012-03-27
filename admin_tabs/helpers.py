@@ -68,8 +68,9 @@ class AdminTab(object):
     """
     One Tab in the admin pages.
     """
-    def __init__(self, name, cols):
+    def __init__(self, name, cols, enabled=True):
         self.name = name
+        self.enabled = enabled
         self._cols = {}
         for idx, col in enumerate(cols):
             self.add_col(col, idx)
@@ -249,7 +250,7 @@ class TabbedPageConfig(object):
     class ColsConfig(object): pass
     class TabsConfig(object): pass
     
-    def __init__(self, request, model_admin, obj=None):
+    def __init__(self, request, model_admin, obj_or_id=None):
         # Create these inner classes at runtime
         # to prevent from sharing them between instances
         self.Fields = type("Fields", (object,), {})
@@ -309,20 +310,22 @@ class TabbedModelAdmin(ModelAdmin):
                                   # at run time
         return super(TabbedModelAdmin, self).__init__(*args, **kwargs)
 
-    def get_page_config(self, request, obj=None, **kwargs):
+    def get_page_config(self, request, obj_or_id=None, **kwargs):
         """
         Returns the page config for the current model_admin.
         
         Override this method to be able to change Tabs, Cols and Fields at 
         runtime.
+        `obj_or_id` could be an instance or a pk or None (when you call it from a 
+        change_view extended, you have only the pk).
         """
         if self._page_config is None:
-            self._page_config = self.page_config_class(request, self, obj=obj)
+            self._page_config = self.page_config_class(request, self, obj_or_id=obj_or_id)
         return self._page_config
     
     def get_fieldsets(self, request, obj=None):
         fieldsets = []
-        page_config = self.get_page_config(request, obj=None)
+        page_config = self.get_page_config(request, obj_or_id=obj)
         for tab in page_config:
             for col in tab:
                 fieldsets += col.get_fieldsets(request, obj)
@@ -337,16 +340,16 @@ class TabbedModelAdmin(ModelAdmin):
     def change_view(self, request, object_id, extra_context=None):
         if extra_context is None:
             extra_context = {}
-        page_config = self.get_page_config(request)
+        page_config = self.get_page_config(request, obj_or_id=object_id)
         extra_context.update({'page_config': page_config})
         return super(TabbedModelAdmin, self).change_view(request, object_id, extra_context)
     
     @csrf_protect_m
     @transaction.commit_on_success
-    def add_view(self, request, object_id, extra_context=None):
+    def add_view(self, request, form_url='', extra_context=None):
         if extra_context is None:
             extra_context = {}
         page_config = self.get_page_config(request)
         extra_context.update({'page_config': page_config})
-        return super(TabbedModelAdmin, self).add_view(request, object_id, extra_context)
+        return super(TabbedModelAdmin, self).add_view(request, form_url, extra_context)
 
