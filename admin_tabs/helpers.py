@@ -8,14 +8,17 @@ class AdminCol(object):
     """
     One column in the admin pages.
     """
-    def __init__(self, fieldsets, name=None, css_id=None, css_class=None):
+    def __init__(self, fieldsets, name=None, css_id=None, css_classes=None):
+        """
+        `css_classes`: list of css classes
+        """
         self.name = name
         self._fieldsets = {} # names of fieldsets for now (real Fieldsets should be better)
         for idx, fieldset in enumerate(fieldsets):
             self.add_fieldset(fieldset, idx)
         self.css_id = css_id
-        self.css_class = css_class
-    
+        self.css_classes = css_classes
+
     def add_fieldset(self, fieldset, position=None):
         if not position:
                 position = len(self)
