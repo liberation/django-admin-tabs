@@ -340,12 +340,17 @@ class TabbedModelAdmin(ModelAdmin):
     
     @csrf_protect_m
     @transaction.commit_on_success
-    def change_view(self, request, object_id, extra_context=None):
+    def change_view(self, request, object_id, form_url='', extra_context=None):
         if extra_context is None:
             extra_context = {}
         page_config = self.get_page_config(request, obj_or_id=object_id)
         extra_context.update({'page_config': page_config})
-        return super(TabbedModelAdmin, self).change_view(request, object_id, extra_context)
+        try:
+            # django 1.4
+            return super(TabbedModelAdmin, self).change_view(request, object_id, form_url=form_url, extra_context=extra_context)
+        except TypeError:
+            # django 1.3
+            return super(TabbedModelAdmin, self).change_view(request, object_id, extra_context=extra_context)
     
     @csrf_protect_m
     @transaction.commit_on_success
@@ -354,5 +359,5 @@ class TabbedModelAdmin(ModelAdmin):
             extra_context = {}
         page_config = self.get_page_config(request)
         extra_context.update({'page_config': page_config})
-        return super(TabbedModelAdmin, self).add_view(request, form_url, extra_context)
+        return super(TabbedModelAdmin, self).add_view(request, form_url=form_url, extra_context=extra_context)
 
