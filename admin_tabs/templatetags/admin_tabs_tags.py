@@ -2,6 +2,7 @@
 from django import template
 from django.contrib.admin.helpers import Fieldset, InlineAdminFormSet
 from django.template.loader import render_to_string
+from django.core.exceptions import ImproperlyConfigured
 
 register = template.Library()
 
@@ -12,6 +13,9 @@ def render_fieldsets_for_admincol(context, admin_col):
     """
     out = ""
     admin_form = context['adminform']
+    if not 'request' in context:
+        raise ImproperlyConfigured(
+               '"request" missing from context. Add django.core.context_processors.request to your TEMPLATE_CONTEXT_PROCESSORS')
     request = context['request']
     obj = context.get('original', None)
     fieldsets = admin_col.get_elements(request, obj, include_inlines=True)
