@@ -1,0 +1,5 @@
+django-admin-tabs is a little app that helps you modify django native admin to
+display tabs and columns in your change forms.
+
+For more information, see the example project (log in with demo/demo) at the
+root of the repository.
