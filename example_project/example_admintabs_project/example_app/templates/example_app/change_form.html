@@ -1,0 +1,106 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_modify adminmedia admin_tabs_tags %}
+
+{% block content %}<div id="content-main">
+{% block object-tools %}
+{% if change %}{% if not is_popup %}
+  <ul class="object-tools">
+    {% block object-tools-items %}
+    <li><a href="history/" class="historylink">{% trans "History" %}</a></li>
+    {% if has_absolute_url %}<li><a href="../../../r/{{ content_type_id }}/{{ object_id }}/" class="viewsitelink">{% trans "View on site" %}</a></li>{% endif%}
+    {% endblock %}
+  </ul>
+{% endif %}{% endif %}
+{% endblock %}
+<form {% if has_file_field %}enctype="multipart/form-data" {% endif %}action="{{ form_url }}" method="post" id="{{ opts.module_name }}_form">{% csrf_token %}{% block form_top %}{% endblock %}
+<div>
+{% if is_popup %}<input type="hidden" name="_popup" value="1" />{% endif %}
+{% if save_on_top %}{% submit_row %}{% endif %}
+{% if errors %}
+    <p class="errornote">
+    {% blocktrans count errors|length as counter %}Please correct the error below.{% plural %}Please correct the errors below.{% endblocktrans %}
+    </p>
+    {{ adminform.form.non_field_errors }}
+{% endif %}
+
+<!-- start admin_tabs stuff -->
+<div id="tabs">
+    <ul>
+        {% for tab in page_config %}
+          <li><a href="#tabs-{{ forloop.counter }}" id="for_tabs-{{ forloop.counter }}">{{ tab.name }}</a></li>
+        {% endfor %}
+    </ul>
+{% for tab in page_config %}
+    <div id="tabs-{{ forloop.counter }}" class="{{ tab.name }}">
+        {% for col in tab %}
+            <div {% if col.css_id %}id="{{ col.css_id }}"{% endif %} {% if col.css_classes %}class="{{ col.css_classes|join:' ' }}"{% endif %}>
+                {% render_fieldsets_for_admincol col %}
+            </div>
+        {% endfor %}
+    </div>
+{% endfor %}
+</div>
+<script type="text/javascript">
+    (function($) {
+        $('#tabs').tabs({
+            {% if add %}
+            // when adding, don't select a tab by default, we'll do it ourselves
+            // by finding the first available tab.
+            selected: -1
+            {% endif %}
+        });
+
+        // disable tabs marked as such in page_config
+        var enabled_tabs = [];
+        var disabled_tabs = [];
+
+        {% for tab in page_config %}
+            {% if tab.enabled %}
+                enabled_tabs.push({{ forloop.counter0 }});
+            {% else %}
+                disabled_tabs.push({{ forloop.counter0 }});
+            {% endif %}
+        {% endfor %}
+
+        for (var i = 0; i < disabled_tabs.length; i++) {
+            $('#tabs').tabs("disable", disabled_tabs[i]);
+        }
+
+        // enable the first non-disabled tab in add view
+        {% if add %}
+            $('#tabs').tabs("select", enabled_tabs[0]);
+        {% endif %}
+
+        // Hightlight tabs with errors inside
+        $('#tabs > div').each(function() {
+            if($(this).find('.errorlist').length) {
+                $('#tabs #for_' +  this.id).addClass("errortab");
+            }
+        }); 
+    })(django.jQuery);
+</script>
+<!-- end admin_tabs stuff -->
+
+{% block after_field_sets %}{% endblock %}
+
+{% comment %}
+# Remove because the inlines are included with the rest in the tabs/cols/fieldsets
+{% for inline_admin_formset in inline_admin_formsets %}
+    {% include inline_admin_formset.opts.template %}
+{% endfor %}
+{% endcomment %}
+
+{% block after_related_objects %}{% endblock %}
+
+{% submit_row %}
+
+{% if adminform and add %}
+   <script type="text/javascript">document.getElementById("{{ adminform.first_field.id_for_label }}").focus();</script>
+{% endif %}
+
+{# JavaScript for prepopulated fields #}
+{% prepopulated_fields_js %}
+
+</div>
+</form></div>
+{% endblock %}
