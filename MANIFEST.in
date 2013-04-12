@@ -1,0 +1,8 @@
+include README
+include LICENSE
+recursive-include docs *
+recursive-include admin_tabs/fixtures *.json
+recursive-include admin_tabs/locale *
+recursive-include admin_tabs/static *
+recursive-include admin_tabs/templates *.txt *.html *.xml *.js
+prune docs/build
