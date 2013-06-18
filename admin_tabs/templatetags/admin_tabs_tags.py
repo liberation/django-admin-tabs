@@ -34,8 +34,11 @@ def render_fieldsets_for_admincol(context, admin_col):
             context["fieldset"] = f
             out += render_to_string(template, context)
         elif "inline" in options:
-            inline_admin_formset = inline_matching[options["inline"]]
-            context["inline_admin_formset"] = inline_admin_formset
-            out += render_to_string(inline_admin_formset.opts.template, context)
+            try:
+                inline_admin_formset = inline_matching[options["inline"]]
+                context["inline_admin_formset"] = inline_admin_formset
+                out += render_to_string(inline_admin_formset.opts.template, context)
+            except KeyError:  # The user does not have the permission
+                pass
     return out
 
